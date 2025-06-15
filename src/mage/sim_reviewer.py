@@ -58,9 +58,13 @@ def sim_review(
         golden_rtl_path = ""
     if os.path.isfile(vvp_name):
         os.remove(vvp_name)
-    cmd = "iverilog -Wall -Winfloop -Wno-timescale -g2012 -o {} {} {} {}; vvp -n {}".format(
-        vvp_name, tb_path, rtl_path, golden_rtl_path, vvp_name
-    )
+    # #cmd = "iverilog -Wall -Winfloop -Wno-timescale -g2012 -o {} {} {} {}; vvp -n {}".format(
+    # cmd = "iverilog -Wall -Winfloop -Wno-timescale -g2012 -s tb -o {} {} {} {} && vvp -n {}".format(
+    #     vvp_name, tb_path, rtl_path, golden_rtl_path, vvp_name
+    # )
+    cmd = f"iverilog -Wall -Winfloop -Wno-timescale -g2012 -s tb -o {vvp_name} {tb_path} {rtl_path} {ref_path} && vvp -n {vvp_name}"
+    print("FINAL COMPILE CMD:", cmd)
+
     is_pass, sim_output = run_bash_command(cmd, timeout=60)
     sim_output_obj = CommandResult.model_validate_json(sim_output)
     is_pass = (
@@ -117,9 +121,12 @@ def sim_review_golden(
         vvp_name = f"{output_path_per_run}/sim_golden.vvp"
         if os.path.isfile(vvp_name):
             os.remove(vvp_name)
-        cmd = "iverilog -Wall -Winfloop -Wno-timescale -g2012 -s tb -o {} {} {} {}; vvp -n {}".format(
-            vvp_name, tb_path, rtl_path, ref_path, vvp_name
-        )
+        # cmd = "iverilog -Wall -Winfloop -Wno-timescale -g2012 -s tb -o {} {} {} {}; vvp -n {}".format(
+        #     vvp_name, tb_path, rtl_path, ref_path, vvp_name
+        # )
+        cmd = f'iverilog -Wall -Winfloop -Wno-timescale -g2012 -s tb -o "{vvp_name}" "{tb_path}" "{rtl_path}" "{ref_path}" && vvp -n "{vvp_name}"'
+        print("FINAL COMPILE CMD:", cmd)
+
         is_pass, sim_output = run_bash_command(cmd, timeout=60)
         sim_output_obj = CommandResult.model_validate_json(sim_output)
         is_pass = (
