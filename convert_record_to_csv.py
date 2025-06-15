@@ -3,7 +3,7 @@ import csv
 import os
 
 #run_id = "claude-3-5-sonnet-20241022_run_0"
-run_id = "claude-3-5-sonnet-20241022_run_0"  
+run_id = "vanilla_rag_claude-3-5-sonnet-20241022_0"  
 input_path = f"output_{run_id}/record.json"
 output_path = f"output_{run_id}/summary_{run_id}.csv"
 

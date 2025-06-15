@@ -5,6 +5,8 @@ import traceback
 from typing import List, Tuple
 
 from llama_index.core.llms import LLM
+from vllm import LLM as VLLMLLM, SamplingParams                   # :contentReference[oaicite:2]{index=2}
+from .selfrag_integration import build_retriever, selfrag_generate
 
 from .log_utils import get_logger, set_log_dir, switch_log_to_file, switch_log_to_stdout
 from .rtl_editor import RTLEditor
@@ -18,8 +20,22 @@ logger = get_logger(__name__)
 
 
 class TopAgent:
-    def __init__(self, llm: LLM):
+    # def __init__(self, llm: LLM):
+    #     self.llm = llm
+    def __init__(
+        self,
+        llm: LLM,
+        use_selfrag: bool = False,
+        selfrag_cfg: dict | None = None,
+    ):
         self.llm = llm
+        self.use_selfrag = use_selfrag
+        if use_selfrag:
+            # build SELF-RAG retriever & vLLM model
+            self.vllm = VLLMLLM(selfrag_cfg["model_name_or_path"])
+            self.sampling_params = SamplingParams(**selfrag_cfg["sampling"])
+            self.retriever = build_retriever(selfrag_cfg["retrieval"])
+        
         self.token_counter = (
             TokenCounterCached(llm)
             if TokenCounterCached.is_cache_enabled(llm)
@@ -68,6 +84,17 @@ class TopAgent:
         - is_pass: bool, whether the instance passes the golden testbench
         - rtl_code: str, the generated RTL code
         """
+
+        # SELF-RAG path
+        if self.use_selfrag:
+            return selfrag_generate(
+                self.vllm,
+                self.retriever,
+                spec,
+                self.sampling_params,
+            ), ""  # selfrag only generates text
+
+
         assert self.tb_gen
         assert self.rtl_gen
         assert self.sim_reviewer

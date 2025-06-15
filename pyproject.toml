@@ -19,7 +19,11 @@ dependencies = [
   "pre-commit",
   "pydantic",
   "rich",
-  "tiktoken"
+  "tiktoken",
+  "sentence_transformers>=2.2.2",   # for embedding-based retrieval
+  "faiss-cpu>=1.7.2",               # vector search backend
+  "tqdm>=4.64.0",                   # progress bars
+  "vllm>=0.5.1",                    # high-throughput LLM inference
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -36,3 +40,12 @@ packages = ["mage"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+
+[project.optional-dependencies]
+rag = [
+    "sentence_transformers>=2.2.2",
+    "faiss-cpu>=1.7.2",
+    "tqdm>=4.64.0",
+    "vllm>=0.5.1",
+]

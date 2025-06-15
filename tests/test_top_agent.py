@@ -33,13 +33,25 @@ args_dict = {
     "type_benchmark": "verilog_eval_v2",
     "path_benchmark": "verilog-eval",
     #"run_identifier": "gpt-4o-2024-08-06_run_at5",
-    "run_identifier": "claude-3-5-sonnet-20241022_run_at5",
-    "n": 5,
+    "run_identifier": "self_rag_claude-3-5-sonnet-20241022_run",
+    "n": 1,
     "temperature": 0.85,
     "top_p": 0.95,
     "max_token": 8192,
     "use_golden_tb_in_mage": True,
     "key_cfg_path": "./key.cfg",
+   # SELF-RAG toggles:
+    "use_selfrag": True,
+    "selfrag_cfg": {
+       "model_name_or_path": "selfrag/selfrag_llama2_7b",
+       "sampling": {"temperature": 0.0, "top_p": 1.0, "max_tokens": 256, "n_docs": 5},
+       "retrieval": {
+           "model_name_or_path": "facebook/contriever-msmarco",
+           "passages_jsonl": "../external/self-rag/retrieval_lm/enwiki_2020_intro_only.jsonl",
+           "embeddings_dir": "../external/self-rag/retrieval_lm/enwiki_embeddings",
+           "n_docs": 5
+       }
+    }
 }
 
 
@@ -65,7 +77,12 @@ def run_round(args: argparse.Namespace, llm: LLM):
         args.filter_instance,
     )
 
-    agent = TopAgent(llm)
+    #agent = TopAgent(llm)
+    agent = TopAgent(
+        llm,
+        use_selfrag=args.use_selfrag,
+        selfrag_cfg=args.selfrag_cfg if args.use_selfrag else None,
+    )
     agent.set_output_path(f"./output_{args.run_identifier}")
     agent.set_log_path(f"./log_{args.run_identifier}")
     agent.set_redirect_log(True)
