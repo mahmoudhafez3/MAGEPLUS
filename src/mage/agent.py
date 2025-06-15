@@ -13,13 +13,23 @@ from .sim_judge import SimJudge
 from .sim_reviewer import SimReviewer
 from .tb_generator import TBGenerator
 from .token_counter import TokenCounter, TokenCounterCached
+from mage.rag_simple import load_corpus, retrieve
 
 logger = get_logger(__name__)
 
 
 class TopAgent:
-    def __init__(self, llm: LLM):
+    def __init__(self, llm: LLM, rag_csv_path: str = "rtl_coder_dataset.csv", rag_k: int = 3):     
+    #def __init__(self, llm: LLM, rag_csv_path: str = "rtl_coder_dataset.csv"):       
+  
         self.llm = llm
+        # ─── Vanilla RAG setup ──────────────────────────
+        if rag_csv_path:
+            self._rag_corpus = load_corpus(rag_csv_path)
+        else:
+            self._rag_corpus = None
+        self._rag_k = rag_k
+
         self.token_counter = (
             TokenCounterCached(llm)
             if TokenCounterCached.is_cache_enabled(llm)
@@ -74,7 +84,18 @@ class TopAgent:
         assert self.sim_judge
         assert self.rtl_edit
 
+      # ─── Inject RAG context ──────────────────────────
+        if self._rag_corpus is not None:
+            examples = retrieve(spec, self._rag_corpus, k=self._rag_k)
+            context = "\n\n".join(
+                f"Example Instruction:\n{ex['instruction']}\n\nResponse:\n{ex['response']}"
+                for ex in examples
+            )
+            spec = context + "\n\n" + spec
+
+        
         self.tb_gen.reset()
+
         self.tb_gen.set_golden_tb_path(self.golden_tb_path)
         if not self.golden_tb_path:
             logger.info("No golden testbench provided")

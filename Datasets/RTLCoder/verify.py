@@ -1,6 +1,6 @@
 from neo4j import GraphDatabase
 
-driver = GraphDatabase.driver("bolt://127.0.0.1:7687", auth=("neo4j", "rtlcoder"))
+driver = GraphDatabase.driver("x", auth=("y", "z"))
 
 info = driver.verify_connectivity()
 print("Connection info:", info)

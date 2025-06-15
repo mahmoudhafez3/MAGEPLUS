@@ -33,13 +33,16 @@ args_dict = {
     "type_benchmark": "verilog_eval_v2",
     "path_benchmark": "verilog-eval",
     #"run_identifier": "gpt-4o-2024-08-06_run_at5",
-    "run_identifier": "claude-3-5-sonnet-20241022_run_at5",
-    "n": 5,
+    "run_identifier": "vanilla_rag_claude-3-5-sonnet-20241022",
+    "n": 1,
     "temperature": 0.85,
     "top_p": 0.95,
     "max_token": 8192,
     "use_golden_tb_in_mage": True,
     "key_cfg_path": "./key.cfg",
+    # Vanilla RAG toggles:
+    "rag_csv_path": "Datasets/RTLCoder/rtl_coder_dataset.csv",
+    "rag_k": 3,
 }
 
 
@@ -65,7 +68,14 @@ def run_round(args: argparse.Namespace, llm: LLM):
         args.filter_instance,
     )
 
-    agent = TopAgent(llm)
+    #agent = TopAgent(llm)
+     
+    agent = TopAgent(
+        llm,
+        rag_csv_path=args.rag_csv_path,
+        rag_k=args.rag_k,
+    )
+
     agent.set_output_path(f"./output_{args.run_identifier}")
     agent.set_log_path(f"./log_{args.run_identifier}")
     agent.set_redirect_log(True)
