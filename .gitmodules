@@ -1,3 +1,6 @@
 [submodule "verilog-eval"]
 	path = verilog-eval
 	url = https://github.com/NVlabs/verilog-eval
+[submodule "external/self-rag"]
+	path = external/self-rag
+	url = https://github.com/AkariAsai/self-rag.git
