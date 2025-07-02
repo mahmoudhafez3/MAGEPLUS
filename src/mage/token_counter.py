@@ -122,11 +122,12 @@ class TokenCounter:
         self.max_parallel_requests: int = 10
         self.enable_reformat_json = isinstance(llm, Vertex)
         model = llm.metadata.model_name
-        if isinstance(llm, OpenAI):
+        llm_ref = getattr(llm, "base_llm", llm)
+        if isinstance(llm_ref, OpenAI):
             self.encoding = tiktoken.encoding_for_model(model)
-        elif isinstance(llm, Anthropic):
+        elif isinstance(llm_ref, Anthropic):
             self.encoding = llm.tokenizer
-        elif isinstance(llm, Vertex):
+        elif isinstance(llm_ref, Vertex):
             assert llm.model.startswith(
                 "gemini"
             ), f"Non-gemini Vertex model is not supported: {llm.model}"
