@@ -362,6 +362,154 @@
 
 
 
+# import argparse
+# import json
+# import time
+# from datetime import timedelta
+# from typing import Any, Dict
+
+# from llama_index.core.llms import LLM
+
+# from mage.agent import TopAgent
+# from mage.self_rag_adapter import SelfRAGRetriever
+# from mage.retrieval_llm import RetrievalLLM
+# from mage.benchmark_read_helper import (
+#     TypeBenchmark,
+#     TypeBenchmarkFile,
+#     get_benchmark_contents,
+# )
+# from mage.gen_config import get_llm, set_exp_setting
+# from mage.log_utils import get_logger
+# from mage.sim_reviewer import sim_review_golden_benchmark
+# from mage.token_counter import TokenCount
+
+# logger = get_logger(__name__)
+
+# RAG_INDEX_PATH = "data/rtlcoder.index"
+
+# args_dict = {
+#     "provider": "anthropic",
+#     "model": "claude-3-5-sonnet-20241022",
+#     "filter_instance": "^(.*)$",
+#     "type_benchmark": "verilog_eval_v2",
+#     "path_benchmark": "verilog-eval",
+#     "run_identifier": "selfrag_test_claude-3-5-sonnet-20241022_run_at5",
+#     "n": 5,
+#     "temperature": 0.85,
+#     "top_p": 0.95,
+#     "max_token": 8192,
+#     "use_golden_tb_in_mage": True,
+#     "key_cfg_path": "./key.cfg",
+# }
+
+
+# def run_round(args: argparse.Namespace, agent: TopAgent):
+#     total_start_time = time.monotonic()
+#     type_benchmark = TypeBenchmark[args.type_benchmark.upper()]
+
+#     spec_dict = get_benchmark_contents(
+#         type_benchmark, TypeBenchmarkFile.SPEC, args.path_benchmark, args.filter_instance
+#     )
+#     golden_tb_path_dict = get_benchmark_contents(
+#         type_benchmark, TypeBenchmarkFile.TEST_PATH, args.path_benchmark, args.filter_instance
+#     )
+#     golden_rtl_path_dict = get_benchmark_contents(
+#         type_benchmark, TypeBenchmarkFile.GOLDEN_PATH, args.path_benchmark, args.filter_instance
+#     )
+
+#     agent.set_output_path(f"./output_{args.run_identifier}")
+#     agent.set_log_path(f"./log_{args.run_identifier}")
+#     agent.set_redirect_log(True)
+
+#     record_file = f"./output_{args.run_identifier}/record.json"
+#     record_json: Dict[str, Dict[str, Any]] = {"record_per_run": {}, "total_record": {}}
+
+#     pass_cnt = 0
+#     token_sum = TokenCount(in_token_cnt=0, out_token_cnt=0)
+#     token_limit_cnt = 0
+
+#     for i, (task_id, spec) in enumerate(spec_dict.items()):
+#         start_time = time.monotonic()
+#         print(f"({i + 1:03d}/{len(spec_dict):03d}) Current task: {task_id}")
+
+#         agent.run(
+#             benchmark_type_name=type_benchmark.name,
+#             task_id=task_id,
+#             spec=spec,
+#             golden_tb_path=(
+#                 golden_tb_path_dict[task_id] if args.use_golden_tb_in_mage else None
+#             ),
+#             golden_rtl_blackbox_path=(
+#                 golden_rtl_path_dict[task_id] if args.use_golden_tb_in_mage else None
+#             ),
+#         )
+
+#         run_time = timedelta(seconds=time.monotonic() - start_time)
+#         print(f"{task_id} took {run_time} to execute")
+
+#         is_pass, _ = sim_review_golden_benchmark(
+#             task_id=task_id,
+#             output_path=agent.output_path,
+#             benchmark_type=type_benchmark,
+#             benchmark_path=args.path_benchmark,
+#         )
+#         print(f"({i + 1:03d}/{len(spec_dict):03d}) {task_id}: is_pass = {is_pass}")
+
+#         run_token_cnt = agent.token_counter.get_sum_count()
+#         run_token_limit_cnt = agent.token_counter.get_total_token()
+#         token_limit_cnt += run_token_limit_cnt
+#         token_sum += run_token_cnt
+#         pass_cnt += is_pass
+#         record_json["record_per_run"][task_id] = {"is_pass": is_pass}
+
+#     print(f"Pass rate: {pass_cnt}/{len(spec_dict)}")
+#     print(
+#         f"Total token count: Input {token_sum.in_token_cnt}, "
+#         f"Output {token_sum.out_token_cnt}"
+#     )
+#     print(f"Total token limit consumption: {token_limit_cnt}")
+
+#     total_run_time = timedelta(seconds=time.monotonic() - total_start_time)
+#     record_json["total_record"] = {
+#         "pass_cnt": pass_cnt,
+#         "total_cnt": len(spec_dict),
+#         "token_limit_cnt": token_limit_cnt,
+#         "total_run_time": str(total_run_time),
+#     }
+#     json.dump(record_json, open(record_file, "w"), indent=4)
+
+
+# def main():
+#     args = argparse.Namespace(**args_dict)
+
+#     base_llm = get_llm(
+#         model=args.model,
+#         cfg_path=args.key_cfg_path,
+#         max_token=args.max_token,
+#         provider=args.provider,
+#     )
+
+#     retriever = SelfRAGRetriever(RAG_INDEX_PATH)
+#     wrapped_llm = RetrievalLLM(base_llm, retriever)
+
+#     agent = TopAgent(base_llm)  # TokenCounter sees the real Anthropic class
+#     agent.llm = wrapped_llm     # swap in retrieval-injecting LLM
+
+#     set_exp_setting(temperature=args.temperature, top_p=args.top_p)
+
+#     identifier_head = args.run_identifier
+#     n = args.n
+#     for i in range(n):
+#         print(f"Round {i + 1}/{n}")
+#         args.run_identifier = f"{identifier_head}_{i}"
+#         run_round(args, agent)
+
+
+# if __name__ == "__main__":
+#     main()
+
+
+# tests/test_top_agent.py
 import argparse
 import json
 import time
@@ -370,9 +518,12 @@ from typing import Any, Dict
 
 from llama_index.core.llms import LLM
 
-from mage.agent import TopAgent
+#from mage.agent import TopAgent
 from mage.self_rag_adapter import SelfRAGRetriever
-from mage.retrieval_llm import RetrievalLLM
+#from mage.retrieval_llm import RetrievalLLM
+
+from mage.rag_top_agent import RAGTopAgent
+
 from mage.benchmark_read_helper import (
     TypeBenchmark,
     TypeBenchmarkFile,
@@ -388,13 +539,13 @@ logger = get_logger(__name__)
 RAG_INDEX_PATH = "data/rtlcoder.index"
 
 args_dict = {
-    "provider": "anthropic",
-    "model": "claude-3-5-sonnet-20241022",
+    "provider": "openai",
+    "model": "gpt-4o-2024-08-06",
     "filter_instance": "^(.*)$",
     "type_benchmark": "verilog_eval_v2",
     "path_benchmark": "verilog-eval",
-    "run_identifier": "selfrag_test_claude-3-5-sonnet-20241022_run_at5",
-    "n": 5,
+    "run_identifier": "selfrag_test_gpt-4o-2024-08-06",
+    "n": 1,
     "temperature": 0.85,
     "top_p": 0.95,
     "max_token": 8192,
@@ -402,8 +553,30 @@ args_dict = {
     "key_cfg_path": "./key.cfg",
 }
 
+# args_dict = {
+#     "provider": "anthropic",
+#     #"provider": "openai",
+#     "model": "claude-3-5-sonnet-20241022",
+#     # "model": "gemini-2.0-flash-001",
+#     # "model": "claude-3-7-sonnet-20250219",
+#     # "model": "gpt-4o-2024-08-06",
+#     # "filter_instance": "^(Prob070_ece241_2013_q2|Prob151_review2015_fsm)$",
+#     #"filter_instance": "^(Prob011_norgate)$",
+#     "filter_instance": "^(.*)$",
+#     "type_benchmark": "verilog_eval_v2",
+#     "path_benchmark": "verilog-eval",
+#     #"run_identifier": "gpt-4o-2024-08-06_run_at5",
+#     "run_identifier": "claude-3-5-sonnet-20241022_run_at5",
+#     "n": 5,
+#     "temperature": 0.85,
+#     "top_p": 0.95,
+#     "max_token": 8192,
+#     "use_golden_tb_in_mage": True,
+#     "key_cfg_path": "./key.cfg",
+# }
 
-def run_round(args: argparse.Namespace, agent: TopAgent):
+
+def run_round(args: argparse.Namespace, agent: RAGTopAgent):
     total_start_time = time.monotonic()
     type_benchmark = TypeBenchmark[args.type_benchmark.upper()]
 
@@ -482,18 +655,25 @@ def run_round(args: argparse.Namespace, agent: TopAgent):
 def main():
     args = argparse.Namespace(**args_dict)
 
-    base_llm = get_llm(
+    # 1) real Anthropic LLM (for tokenization & cost tables)
+    base_llm: LLM = get_llm(
         model=args.model,
         cfg_path=args.key_cfg_path,
         max_token=args.max_token,
         provider=args.provider,
     )
 
+    # 2) Self-RAG retriever + wrapper
     retriever = SelfRAGRetriever(RAG_INDEX_PATH)
-    wrapped_llm = RetrievalLLM(base_llm, retriever)
+    #wrapped_llm = RetrievalLLM(base_llm, retriever)
 
-    agent = TopAgent(base_llm)  # TokenCounter sees the real Anthropic class
-    agent.llm = wrapped_llm     # swap in retrieval-injecting LLM
+    # # 3) Build TopAgent so TokenCounter sees the *real* LLM class
+    # agent = TopAgent(base_llm)
+    # # 4) Now swap in the retrieval-wrapped LLM for actual generation
+    # agent.llm = wrapped_llm
+    # agent.token_counter.llm = wrapped_llm   # <- critical so RTLGenerator & friends use it
+
+    agent = RAGTopAgent(retriever, base_llm)
 
     set_exp_setting(temperature=args.temperature, top_p=args.top_p)
 
